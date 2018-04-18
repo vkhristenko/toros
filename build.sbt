@@ -9,14 +9,22 @@ val sharedSettings = Seq(
 // to make sbt able to search mvn local repository
 resolvers += Resolver.mavenLocal
 
-// hello task
-lazy val hello = taskKey[Unit]("An example task")
+// root project definition
+lazy val toros = 
+  crossProject(JSPlatform, JVMPlatform, NativePlatform)
+    .crossType(CrossType.Pure)
+    .settings(sharedSettings)
+    .in(file("."))
+    .aggregate(io).dependsOn(io)
 
-// io project
+// io sub-project
 lazy val io = 
   crossProject(JSPlatform, JVMPlatform, NativePlatform)
     .crossType(CrossType.Full)
-    .settings (sharedSettings, hello := {println("Hello World!")} )
+    .settings (
+      sharedSettings, 
+      hello := {println("Hello World!")},
+      name := "toros-io")
     .jsSettings( hello := {println("Hello JS!")})
     .jvmSettings()
     .nativeSettings()
