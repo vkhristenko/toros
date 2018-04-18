@@ -15,7 +15,20 @@ lazy val toros =
     .crossType(CrossType.Pure)
     .settings(sharedSettings)
     .in(file("."))
-    .aggregate(io).dependsOn(io)
+    .aggregate(io, apps).dependsOn(io, apps)
+
+// apps sub-project
+lazy val apps = 
+  crossProject(JSPlatform, JVMPlatform, NativePlatform)
+    .crossType(CrossType.Full)
+    .settings (
+      sharedSettings, 
+      name := "toros-apps")
+    .jsSettings()
+    .jvmSettings()
+    .nativeSettings()
+    .in(file("apps"))
+    .dependsOn(io)
 
 // io sub-project
 lazy val io = 
@@ -23,9 +36,8 @@ lazy val io =
     .crossType(CrossType.Full)
     .settings (
       sharedSettings, 
-      hello := {println("Hello World!")},
       name := "toros-io")
-    .jsSettings( hello := {println("Hello JS!")})
+    .jsSettings()
     .jvmSettings()
     .nativeSettings()
     .in(file("io"))
@@ -33,3 +45,7 @@ lazy val io =
 lazy val ioJS     = io.js
 lazy val ioJVM    = io.jvm
 lazy val ioNative = io.native
+
+lazy val appsJS     = apps.js
+lazy val appsJVM    = apps.jvm
+lazy val appsNative = apps.native
