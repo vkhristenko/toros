@@ -264,6 +264,9 @@ object test_io {
     //
     val fseekkeys = buffer.getInt
     println(s"fseekkeys = $fseekkeys")
+    println(s"current position = ${buffer.position}")
+
+    dump_raw_buffer(buffer)
 
     //
     //
