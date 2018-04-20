@@ -13,7 +13,7 @@ package object io {
     val ch = FileChannel.open(p)
     val buffer = ByteBuffer.allocateDirect(bsize)
     ch.read(buffer)
-    buffer.rewind.limit(if (bsize > ch.size.toInt) ch.size.toInt else bsize)
+    buffer.rewind.limit(if (bsize.toLong > ch.size) ch.size.toInt else bsize)
     (buffer, ch)
   }
 
