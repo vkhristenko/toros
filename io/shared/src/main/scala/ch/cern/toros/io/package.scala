@@ -7,6 +7,8 @@ import java.nio.channels.FileChannel
 
 package object io {
 
+  def open(path: String, bsize: Int = 1000): tmp.File = tmp.File(path)
+
   // for simple cli debugging
   def setup(path: String, bsize: Int = 1000): (ByteBuffer, FileChannel) = {
     val p = FileSystems.getDefault.getPath(path)
@@ -22,8 +24,11 @@ package object io {
     def slice(start: Int, end: Int): ByteBuffer = 
       buffer.slice.position(start).limit(end).asInstanceOf[ByteBuffer]
 
-    def toRawString: String = {
-      def dump(bytes: Array[Byte], ngroups: Int = 25): String = {
+    def slice(from: Int): ByteBuffer = 
+      buffer.slice.position(from).asInstanceOf[ByteBuffer]
+
+    def toRawString(ngroups: Int = 25): String = {
+      def dump(bytes: Array[Byte]): String = {
         val header = (for (i <- 0 until ngroups) yield ("%02d" format i)).mkString(" ");
         val dump = bytes.map({
           x: Byte => "%02X" format x
