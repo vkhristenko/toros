@@ -93,8 +93,9 @@ package object tmp {
   }
 
   /*
-  class TopDirectory(val buffer: ByteBuffer) extends Directory {
-    case class Product(version: Int,
+  class TopDirectory(val key: Key, val buffer: ByteBuffer) extends Base {
+    case class Product(name: String, title: String,
+                       version: Int,
                        datimec: Int, datimem: Int,
                        nbyteskeys: Int, nbytesname: Int,
                        seekdir: Long, seekparent: Long, seekkeys: Long,
@@ -102,7 +103,21 @@ package object tmp {
                        keys: List[Key]);
 
     val dir: Product = {
-      val version = 
+      val name = buffer.getString
+      val title = buffer.getString
+      val version = buffer.getShort
+      val datimec = buffer.getInt
+      val datimem = buffer.getInt
+      val nbyteskeys = buffer.getInt
+      val nbytesname = buffer.getInt
+      
+      val (seekdir, seekparent, seekkeys) = if (version > 1000) 
+        (buffer.getLong, buffer.getLong, buffer.getLong)
+      else
+        (buffer.getInt, buffer.getInt, buffer.getInt)
+
+      buffer.position(seekkeys)
+      
     }
   }
 

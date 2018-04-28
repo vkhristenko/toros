@@ -14,9 +14,9 @@ import java.nio.channels.FileChannel
 
 object test_io {
   def main(args: Array[String]): Unit = {
-    test_java_io(args(0));
-    test_java_nio(args(0));
-    test_java_nio_file(args(0));
+//    test_java_io(args(0));
+//    test_java_nio(args(0));
+//    test_java_nio_file(args(0));
 
     test_root_header(args(0))
   }
@@ -369,7 +369,7 @@ object test_io {
     println(s"channel position = ${ch.position}") 
 
     // get a byte buffer and read the first 
-    val bbuffer = ByteBuffer.allocateDirect(ch.size.toInt);
+    val bbuffer = ByteBuffer.allocateDirect(1000);
     ch.read(bbuffer)
     // have to rewind the buffer back to 0
     bbuffer.rewind
@@ -382,6 +382,7 @@ object test_io {
     root_header(bbuffer)
     dump_raw_buffer(bbuffer)
 
+    /*
     bbuffer.position(346)
     read_tkey(bbuffer)
     read_free(bbuffer);
@@ -391,6 +392,7 @@ object test_io {
     bbuffer.position(261)
     read_streamer(bbuffer)
     dump_raw_buffer(bbuffer)
+    */
 
   }
   
