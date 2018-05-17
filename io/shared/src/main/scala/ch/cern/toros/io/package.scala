@@ -7,6 +7,47 @@ import java.nio.channels.FileChannel
 
 package object io {
 
+  abstract class PObject;
+  case class PDatime(raw: Int) extends PObject;
+  object PDatime {
+    def build(buffer: ByteBuffer): PDatime = {
+      new PDatime(buffer.getInt)
+    }
+  }
+  case class PKey(
+    totalBytes: Int,
+    version: Int,
+    objBytes: Int,
+    datime: PDatime,
+    keyBytes: Short,
+    cycle: Short,
+    seekKey: Long,
+    seekPDir: Long,
+    className: String,
+    objName: String,
+    objTitle: String
+  ) extends PObject;
+  object PKey {
+    def build(buffer: ByteBuffer): PKey = {
+      val nbytes = buffer.getInt
+      val version = buffer.getVersion
+      val objBytes = buffer.getInt
+      val dt = PDatime.build(buffer)
+      val keyBytes = buffer.getShort
+      val cycle = buffer.getShort
+      val (seekKey, seekPDir) = 
+        if (version > 1000) (buffer.getLong, buffer.getLong)
+        else (buffer.getInt.toLong, buffer.getInt.toLong)
+      val className = buffer.getString
+      val objName = buffer.getString
+      val objTitle = buffer.getString
+      new PKey(nbytes, version, objBytes,
+               dt, keyBytes, cycle,
+               seekKey, seekPDir, 
+               className, objName,objTitle)
+    }
+  }
+
   def open(path: String, bsize: Int = 1000): tmp.File = tmp.File(path)
 
   // for simple cli debugging
