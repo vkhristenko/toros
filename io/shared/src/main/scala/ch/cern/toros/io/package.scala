@@ -244,10 +244,34 @@ seekkeys   = ${seekkeys}
   }
 
   // trivial decompression
-  import java.unit.zip.Inflater
+  import java.util.zip.Inflater
   def unzip(key: PKey, buffer: ByteBuffer): ByteBuffer = {
-    val new_buffer = ByteBuffer.allocateDirect(key.objBytes)
+    // setup the buffers, assume that buffer's current position is at the right byte
     val zipped_size = key.totalBytes - key.keyBytes
+    val input = Array.fill[Byte](zipped_size)(0)
+    buffer.get(input)
+    val output = Array.fill[Byte](key.objBytes)(0)
+
+    // unzip for now only zlib
+    val infl = new Inflater(false)
+    var done = false
+    var posZipped = 9 // first 9 bytes root uses for something...
+    var posUnzipped = 0
+    while (posUnzipped < key.objBytes) {
+      // unzip
+      infl.setInput(input, posZipped, input.size - posZipped);
+      val bytes = infl.inflate(output, posUnzipped, output.size - posUnzipped)
+
+      // update counters
+      posUnzipped += bytes
+      posZipped += infl.getTotalIn
+      infl.reset
+    }
+
+    // post process
+    val out_buffer = ByteBuffer.allocateDirect(output.size)
+    out_buffer.put(output).rewind;
+    out_buffer
   }
 
   // for simple cli debugging
@@ -293,8 +317,8 @@ seekkeys   = ${seekkeys}
       if ((v & 0x4000) == 0) 
         v.toInt
       else {
-        val nbytes: Int = ((v & 0x4fff) << 16) + buffer.getShort
-        nbytes
+        val nbytes: Int = ((v & 0x3fff) << 16) + buffer.getShort
+        buffer.getShort.toInt
       }
     }
 
