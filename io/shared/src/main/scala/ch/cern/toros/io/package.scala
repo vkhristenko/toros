@@ -29,7 +29,23 @@ package object io {
     compress: Int,
     seekinfo: Long,
     nbytesinfo: Int
-  ) extends PObject;
+  ) extends PObject {
+    override def toString = s"""
+Product File Header:
+--------------------
+version = ${version}
+begin = ${begin}
+end = ${end}
+seekfree = ${seekfree}
+nbytesfree = ${nbytesfree}
+nfree = ${nfree}
+nbytesname = ${nbytesname}
+units = ${units}
+compress = ${compress}
+seekinfo = ${seekinfo}
+nbytesinfo = ${nbytesinfo}
+"""
+  }
   case class PKey(
     totalBytes: Int,
     version: Int,
@@ -42,7 +58,23 @@ package object io {
     className: String,
     objName: String,
     objTitle: String
-  ) extends PObject;
+  ) extends PObject {
+    override def toString = s"""
+Product Key:
+------------
+totalBytes = ${totalBytes} (keyBytes + objBytes, unless compressed)
+version    = ${version}
+objBytes   = ${objBytes}
+datime     = ${datime}
+keyBytes   = ${keyBytes}
+cycle      = ${cycle}
+seekKey    = ${seekKey}
+seekPDir   = ${seekPDir}
+className  = ${className}
+objName    = ${objName}
+objTitle   = ${objTitle}
+"""
+  }
 
   // 
   // factories
@@ -120,7 +152,20 @@ package object io {
     seekdir: Long,
     seekparent: Long,
     seekkeys: Long
-  ) extends PObject;
+  ) extends PObject {
+    override def toString = s"""
+Product Directory:
+------------------
+version    = ${version}
+datetimec  = ${datimec}
+datimem    = ${datimem}
+nbyteskeys = ${nbyteskeys}
+nbytesname = ${nbytesname}
+seekdir    = ${seekdir}
+seekparent = ${seekparent}
+seekkeys   = ${seekkeys}
+"""
+  }
   object PDirectory {
     def build(buffer: ByteBuffer) = {
       val version = buffer.getVersion
@@ -148,7 +193,61 @@ package object io {
   }
 
   def lldump(path: String): Unit = {
+    val (buffer, fch) = setup(path)
+    // pretty printing
+    def print(pkey: PKey, level: Int = 0): Unit = {
+      val offset = "--"*level + " "
+      println(s"$offset| objName=${pkey.objName} className=${pkey.className} at:${pkey.seekKey} size:${pkey.totalBytes}")
+    }
 
+    // recurse into sub directories if there are any
+    def recurse(pdir: PDirectory, level: Int = 0): Unit = {
+      // read from the channel
+      val buf = ByteBuffer.allocateDirect(pdir.nbyteskeys)
+      fch.read(buf, pdir.seekkeys)
+      buf.rewind
+
+      // tlist key
+      val tlistKey = PKey.build(buf)
+      // nkeys
+      val nKeys = buf.getInt
+      // collectd all of them
+      val keys = for (i <- 0 until nKeys) yield PKey.build(buf)
+      // for each, print the info and recurse for directories
+      for (key <- keys) {
+        print(key, level)
+        if (key.className=="TDirectory") {
+          // given a key
+          // allocate a buffer for the data record
+          val buf1 = ByteBuffer.allocateDirect(key.totalBytes)
+          fch.read(buf1, key.seekKey)
+          buf1.rewind
+
+          val tkey = PKey.build(buf1)
+          val ppdir = PDirectory.build(buf1)
+          recurse(ppdir, level+1)
+        }
+      }
+    }
+
+    val header = PFileHeader.build(buffer.slice)
+
+    // assume that initial buffer is able to contain the top dir key + tnamed
+    val slice = buffer.slice; slice.position(header.begin)
+    val topDirKey = PKey.build(slice)
+    val tnamed = PNamed.build(slice)
+
+    // assume that initial buffer is able to contain the top level directory
+    val pdir = PDirectory.build(slice)
+    print(topDirKey, 0)
+    recurse(pdir)
+  }
+
+  // trivial decompression
+  import java.unit.zip.Inflater
+  def unzip(key: PKey, buffer: ByteBuffer): ByteBuffer = {
+    val new_buffer = ByteBuffer.allocateDirect(key.objBytes)
+    val zipped_size = key.totalBytes - key.keyBytes
   }
 
   // for simple cli debugging
@@ -218,3 +317,4 @@ package object io {
     }
   }
 }
+
