@@ -192,6 +192,56 @@ seekkeys   = ${seekkeys}
     }
   }
 
+  case class FileContext(fch: FileChannel);
+
+  def topDir(context: FileContext): PDirectory = {
+    // 300 is just a good guess
+    val bsize = 300
+
+    // read the buffer
+    val buffer = ByteBuffer.allocateDirect(bsize)
+    context.fch.read(buffer)
+    buffer.rewind.limit(
+      if (bsize.toLong > context.fch.size) context.fch.size.toInt else bsize)  
+
+    // read the header of the file, get to the top directory 
+    val header = PFileHeader.build(buffer.slice)
+    val slice = buffer.slice; slice.position(header.begin)
+    val topDirKey = PKey.build(slice)
+    val tnamed = PNamed.build(slice)
+
+    // assume that initial buffer is able to contain the top level directory
+    PDirectory.build(slice)
+  }
+
+  def list_keys(pdir: PDirectory)(implicit context: FileContext) = {
+    // read from the channel
+    val buf = ByteBuffer.allocateDirect(pdir.nbyteskeys)
+    context.fch.read(buf, pdir.seekkeys)
+    buf.rewind
+
+    // tlist key
+    val tlistkey = PKey.build(buf)
+    // nkeys
+    val nkeys = buf.getInt
+    // collecdt all of them
+    for (i <- 0 until nkeys) yield PKey.build(buf)
+  }
+
+  def blob(pkey: PKey)(implicit cxt: FileContext): ByteBuffer = {
+    // read key + blob into the buffer
+    val buf0 = ByteBuffer.allocateDirect(pkey.totalBytes)
+    cxt.fch.read(buf0, pkey.seekKey)
+    buf0.rewind
+
+    // split into key,blob
+    val key = PKey.build(buf0)
+    if (pkey.objBytes > pkey.totalBytes-pkey.keyBytes)
+      unzip(pkey, buf0)
+    else 
+      buf0
+  }
+
   def lldump(path: String): Unit = {
     val (buffer, fch) = setup(path)
     // pretty printing
@@ -272,6 +322,12 @@ seekkeys   = ${seekkeys}
     val out_buffer = ByteBuffer.allocateDirect(output.size)
     out_buffer.put(output).rewind;
     out_buffer
+  }
+
+  def open(path: String): FileContext = {
+    val p = FileSystems.getDefault.getPath(path)
+    val ch = FileChannel.open(p)
+    FileContext(ch)
   }
 
   // for simple cli debugging
